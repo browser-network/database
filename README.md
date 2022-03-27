@@ -100,8 +100,13 @@ python -m SimpleHTTPServer
 ```
 
 Now navigate to `localhost:8000` or whatever port you're hosting it on, with
-a few browser windows, and you'll soon start to see messages being passed back
-and forth.
+a few browser windows.
+
+Now, in one of them, open up the console, and run `setState('hello, world!')`
+
+You should see, eventually, that state appear on the screens of all the different
+browser windows you have open.
+
 ## Usage
 
 ```ts
