@@ -1,0 +1,105 @@
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <title>Dbdb</title>
+  </head>
+  <body style="background-color: black; color: white;">
+
+    <code>
+      <h2><code id='client-id'></code></h2>
+
+      <h3>connections</h3>
+      <code id='connections'></code>
+
+      <h3>states</h3>
+      <code id='states'></code>
+
+      <h3>messages</h3>
+      <code id='messages'></code>
+
+      <h3>switchboard request interval</h3>
+      <code id='switchboard-request-interval'></code>
+
+      <button onclick='sendMessage(dbdb.network.clientId + ": Hello there!")'>Say Hi</button>
+
+      <div>
+        <button onclick='dbdb.network.startSwitchboardRequestInterval()'>Start Switch Interval</button>
+        <button onclick='dbdb.network.startOfferBroadcastInterval()'>Start Offer Broadcast</button>
+        <button onclick='dbdb.network.startGarbageCollectionInterval()'>Start Garbage Collection</button>
+      </div>
+
+      <div>
+        <button onclick='dbdb.network.stopSwitchboardRequestInterval()'>Stop Switch Interval</button>
+        <button onclick='dbdb.network.stopOfferBroadcastInterval()'>Stop Offer Broadcast</button>
+        <button onclick='dbdb.network.stopGarbageCollectionInterval()'>Stop Garbage Collection</button>
+      </div>
+    </code>
+
+    <script src="/umd/dbdb.js"></script>
+    <script src="//unpkg.com/@browser-network/network/umd/network.js"></script>
+
+    <script>
+      window.dbdb = new Dbdb.Dbdb({
+        secret: '7e842370a488733a1f226e9686f37d8817f8960c2edfc21eddda51f6a9d7c4c4',
+        appId: '[dbdb-test-app-id]',
+        network: new Network.Network({
+          switchAddress: 'http://localhost:5678',
+          clientId: localStorage.clientId || crypto.randomUUID(),
+          networkId: '[dbdb-test-network-id]',
+          config:{
+            offerBroadcastInterval: 5 * 1000,
+            switchboardRequestInterval: 5 * 1000,
+            respectSwitchboardVolunteerMessages: true
+          }
+        })
+      })
+
+      function sendMessage(message) {
+        dbdb.network.broadcast({
+          id: crypto.randomUUID(),
+          type: 'wahooooooo',
+          data: message,
+          ttl: 1,
+          destination: '*',
+          timestamp: Date.now(),
+          clientId: dbdb.network.clientId
+        })
+      }
+
+      dbdb.network.on('message', ({ appId, message}) => {
+        switch (message.type) {
+          case 'wahooooooo': {
+            const innerHTML = document.querySelector('#messages').innerHTML
+            document.querySelector('#messages').innerHTML = message.data + '</br>' + innerHTML
+            break;
+          }
+          default: {
+            // console.log('got some kinda crazy thing:', message)
+          }
+        }
+      })
+
+      dbdb.onChange(() => {
+        console.log('got a change!', dbdb.getAll())
+      })
+
+      setInterval(function() {
+        document.querySelector('#client-id').innerHTML = JSON.stringify(dbdb.network.clientId, 0, 2)
+
+        document.querySelector('#connections').innerHTML = dbdb.network.connections.bind(dbdb.network)().map(c => {
+          return '<br>' + JSON.stringify({
+            connectionId: c.id,
+            clientId: c.clientId
+          })
+        })
+
+        document.querySelector('#switchboard-request-interval').innerHTML = JSON.stringify(dbdb.network._switchboardRequestInterval, 0, 2)
+
+        document.querySelector('#states').innerHTML = dbdb.getAll().map(w => '<br>' + JSON.stringify([w.id, w.timestamp, w.state]))
+      }, 500)
+
+      window.DEBUG = false
+    </script>
+  </body>
+</html>

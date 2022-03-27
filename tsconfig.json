@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "declaration": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["es5", "es6", "dom"],
+    "noFallthroughCasesInSwitch": true,
+    "pretty": true,
+    "sourceMap": false,
+    "rootDir": ".",
+    "noEmitOnError": true,
+    "outDir": "./dist/",
+    "module": "umd",
+    "allowJs": true,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+  },
+  "exclude": [
+    "node_modules"
+  ],
+  "include": [
+    "src/**/*.ts"
+  ]
+}
