@@ -9,6 +9,7 @@
     "umd/**/*"
   ],
   "scripts": {
+    "test": "tap --ts --no-timeout --no-coverage test/*.ts",
     "clean": "shx rm -rf dist build umd; shx mkdir umd",
     "compile:ts": "tsc",
     "compile:pack": "browserify dist/src/index.js -o umd/dbdb.js -s Dbdb",
@@ -40,19 +41,22 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@browser-network/crypto": "^0.0.1",
     "@browser-network/network": "^0.0.1",
-    "eccrypto": "^1.1.6",
-    "uuid": "^8.3.2"
+    "eccrypto": "^1.1.6"
   },
   "devDependencies": {
     "@types/eccrypto": "^1.1.3",
-    "@types/node": "^13.9.0",
-    "@types/uuid": "^8.3.4",
+    "@types/node": "^16",
+    "@types/tap": "^15.0.7",
     "browserify": "^17.0.0",
     "nodemon": "^2.0.15",
     "np": "^7.6.0",
     "npm-run-all": "^4.1.5",
     "shx": "^0.3.4",
+    "tap": "^16.1.0",
+    "tap-spec": "^5.0.0",
+    "ts-node": "^10.7.0",
     "typescript": "^4.4.4",
     "uglify-js": "^3.15.3"
   }

@@ -1,5 +1,4 @@
-import crypto from 'crypto'
-import * as eccrypto from 'eccrypto'
+import * as bnc from '@browser-network/crypto'
 
 import { LocalDB, WrappedState } from './LocalDB'
 import { Network, Message } from '@browser-network/network'
@@ -8,45 +7,25 @@ import { debugFactory } from './util'
 
 const debug = debugFactory('Dbdb')
 
-const btos = (buffer: Buffer): string => buffer.toString('hex')
-const stob = (str: string): Buffer => Buffer.from(str, 'hex')
-const hash = (data: any) => crypto.createHash('sha256').update(JSON.stringify(data)).digest()
-
-const wrapState = async <S>(state: S, clientId: t.IDString, pub: t.PublicKey, priv: t.PrivateKey): Promise<WrappedState<S>> => {
-  const wrapped: WrappedState<S> = await signObject(priv, {
-    id: clientId,
+// convenience
+const wrapState = async <S>(state: S, address: t.IDString, pub: t.PublicKey, priv: t.PrivateKey): Promise<WrappedState<S>> => {
+  const wrapp: Omit<WrappedState<S>, 'signature'> = {
+    id: address,
     timestamp: Date.now(),
     state: state,
     publicKey: pub
-  })
+  }
+
+  const signature = await bnc.sign(priv, wrapp)
+  const wrapped: WrappedState<S> = Object.assign(wrapp, { signature })
 
   return wrapped
 }
 
-const signObject = async <T>(secret: t.PrivateKey, obj: T): Promise<T & { signature: string }> => {
-  const stringState = JSON.stringify(obj)
-  const hashBuff    = hash(stringState)
-  const keyBuff     = stob(secret) as Buffer
-
-  const sigBuff = await eccrypto.sign(keyBuff, hashBuff)
-  const signature = btos(sigBuff)
-
-  return Object.assign({}, obj, { signature })
-}
-
-const verifySignature = async (update: WrappedState): Promise<boolean> => {
-  const updateSansSig = Object.assign({}, update)
-  delete updateSansSig.signature
-
-  const stringState = JSON.stringify(updateSansSig)
-  const hashBuff    = hash(stringState)
-  const pubBuff     = stob(update.publicKey) as Buffer
-  const sigBuff     = stob(update.signature) as Buffer
-
-  try {
-    await eccrypto.verify(pubBuff, hashBuff, sigBuff)
-    return true
-  } catch (e) { return false }
+// convenience
+const verifySignature = (update: WrappedState) => {
+  const { signature, ...wrapp } = update
+  return bnc.verifySignature(wrapp, signature, update.publicKey)
 }
 
 type StateUpdateMessage = {
@@ -57,7 +36,7 @@ type StateUpdateMessage = {
 
 type StateRequestMessage = {
   type: 'state-request'
-  data: t.IDString // the clientId for the state for which you're looking
+  data: t.IDString // the address for the state for which you're looking
   appId: string
 }
 
@@ -90,8 +69,8 @@ export class Dbdb<S> {
   network: Network
   localDB: LocalDB
   networkId: t.IDString
-  clientId: t.IDString
-  publicKey: t.PublicKey // TODO not sure yet if this will be itself or just be the clientId
+  address: t.IDString
+  publicKey: t.PublicKey // TODO not sure yet if this will be itself or just be the address
   secret: string
   switchAddress: t.SwitchAddress
   allowList: t.IDString[] = []
@@ -102,8 +81,8 @@ export class Dbdb<S> {
   constructor({ secret, appId, network }: DbdbProps) {
     this.networkId = network.networkId
     this.appId = appId
-    this.localDB = new LocalDB(this.networkId)
-    this.clientId = network.clientId
+    this.localDB = new LocalDB(appId)
+    this.address = network.address
     this.secret = secret
     this.network = network
 
@@ -113,22 +92,22 @@ export class Dbdb<S> {
     })
 
     // Here we derive the pub key from the private
-    this.publicKey = btos(eccrypto.getPublicCompressed(stob(secret)))
+    this.publicKey = bnc.derivePubKey(secret)
 
     setInterval(this.broadcastStateOfferings, 5000)
   }
 
   async set(state: S): Promise<void> {
     // set to local state
-    const data = await wrapState(state, this.clientId, this.publicKey, this.secret)
+    const data = await wrapState(state, this.address, this.publicKey, this.secret)
     this.setLocal(data)
 
     // send update into the network
     this.broadcastStateUpdate(data)
   }
 
-  get(clientId: t.IDString): WrappedState<S> | undefined {
-    return this.localDB.get(clientId) as WrappedState<S>
+  get(address: t.IDString): WrappedState<S> | undefined {
+    return this.localDB.get(address) as WrappedState<S>
   }
 
   getAll = () => this.localDB.getAll()
@@ -142,8 +121,7 @@ export class Dbdb<S> {
   // Generate the type of secret key that dbdb uses for its
   // cryptography.
   static generateSecret() {
-    const privBuf = eccrypto.generatePrivate()
-    return btos(privBuf)
+    return bnc.generateSecret()
   }
 
   private onMessage = (message: DbdbMessage & Message) => {
@@ -164,12 +142,12 @@ export class Dbdb<S> {
   }
 
   private onStateOffering(offerings: StateOfferings) {
-    const requestState = (clientId: t.IDString) => {
+    const requestState = (address: t.IDString) => {
       this.network.broadcast({
         type: 'state-request',
         appId: this.appId,
-        destination: clientId,
-        data: clientId
+        destination: address,
+        data: address
       })
     }
 

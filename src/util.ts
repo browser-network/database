@@ -1,8 +1,8 @@
 type LogLevel = 1 | 2 | 3 | 4 | 5
 
 export const debugFactory = (appName: string) => {
-  return (logLevel: LogLevel, ...args) => {
-    if (window['DEBUG'] >= logLevel) {
+  return (logLevel: LogLevel, ...args: any[]) => {
+    if (globalThis['DEBUG'] >= logLevel) {
       console.log(`[${logLevel}] ${appName}: `, ...args)
     }
   }

@@ -58,6 +58,7 @@ super quick and easy:
 
     <code id='state'></code>
 
+    <script src="//unpkg.com/@browser-network/crypto/umd/crypto.min.js"></script>
     <script src="//unpkg.com/@browser-network/network/umd/network.min.js"></script>
     <script src="//unpkg.com/@browser-network/database/umd/dbdb.min.js"></script>
     <script>
@@ -70,7 +71,7 @@ super quick and easy:
 
       const dbdb = new Dbdb.Dbdb({
         network: network,
-        secret: Dbdb.Dbdb.generateSecret(),
+        secret: Bnc.generateSecret(),
         appId: 'dbdb-app-id' // this just needs to be unique for your app, which it is for this
       })
 

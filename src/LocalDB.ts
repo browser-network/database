@@ -21,47 +21,57 @@ export type WrappedState<S = unknown> = {
   publicKey: t.PublicKey
 }
 
-type SupportedMetaKeys = 'clientId'
+const buildStorageShim = () => {
+  // @ts-ignore
+  const localStorageShim: Storage = {}
+
+  localStorageShim.setItem = (key: string, val: string) => {
+    localStorageShim[key] = val
+  }
+
+  localStorageShim.getItem = (key: string) => {
+    return localStorageShim[key]
+  }
+
+  return localStorageShim
+}
 
 export class LocalDB {
   keyPrefix = 'dbdb'
+  localStorage: ReturnType<typeof buildStorageShim>
 
   appId: t.GUID
 
   constructor(appId: t.GUID) {
     this.appId = appId
+
+    this.localStorage = globalThis.localStorage || buildStorageShim()
   }
 
-  set(val: WrappedState, clientId: t.IDString): void {
-    const key = this.buildKey(clientId)
-    localStorage.setItem(key, JSON.stringify(val))
+  set(val: WrappedState, address: t.IDString): void {
+    const key = this.buildKey(address)
+    this.localStorage.setItem(key, JSON.stringify(val))
   }
 
-  get(clientId: t.IDString): WrappedState | undefined {
-    const key = this.buildKey(clientId)
+  get(address: t.IDString): WrappedState | undefined {
+    const key = this.buildKey(address)
     return this.getByKey(key)
   }
 
   getAll(): WrappedState[] {
-    const lsKeys = Object.keys(localStorage)
+    const lsKeys = Object.keys(this.localStorage)
     const ourKeys = lsKeys.filter(key => key.indexOf(this.buildKey('')) > -1)
     return ourKeys.map(this.getByKey)
   }
 
-  setMeta(key: SupportedMetaKeys, val: string) {
-    return localStorage.setItem(key, val)
+  buildKey(address: t.IDString) {
+    return `${this.keyPrefix}-${this.appId}-${address}`
   }
 
-  getMeta(key: SupportedMetaKeys) {
-    return localStorage.getItem(key)
-  }
-
-  buildKey(clientId: t.IDString) {
-    return `${this.keyPrefix}-${this.appId}-${clientId}`
-  }
-
-  private getByKey(key: string): WrappedState {
-    return JSON.parse(localStorage.getItem(key))
+  private getByKey = (key: string): WrappedState | null => {
+    const gotten = this.localStorage.getItem(key)
+    if (!gotten) return null
+    return JSON.parse(gotten)
   }
 
 }

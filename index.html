@@ -21,7 +21,7 @@
       <h3>switchboard request interval</h3>
       <code id='switchboard-request-interval'></code>
 
-      <button onclick='sendMessage(dbdb.network.clientId + ": Hello there!")'>Say Hi</button>
+      <button onclick='sendMessage(dbdb.network.address + ": Hello there!")'>Say Hi</button>
 
       <div>
         <button onclick='dbdb.network.startSwitchboardRequestInterval()'>Start Switch Interval</button>
@@ -36,6 +36,7 @@
       </div>
     </code>
 
+    <script src="//unpkg.com/@browser-network/crypto/umd/crypto.js"></script>
     <script src="/umd/dbdb.js"></script>
     <script src="//unpkg.com/@browser-network/network/umd/network.js"></script>
 
@@ -45,12 +46,12 @@
         appId: '[dbdb-test-app-id]',
         network: new Network.Network({
           switchAddress: 'http://localhost:5678',
-          clientId: localStorage.clientId || crypto.randomUUID(),
+          secret: Bnc.generateSecret(),
           networkId: '[dbdb-test-network-id]',
           config:{
             offerBroadcastInterval: 5 * 1000,
             switchboardRequestInterval: 5 * 1000,
-            respectSwitchboardVolunteerMessages: true
+            respectSwitchboardVolunteerMessages: false
           }
         })
       })
@@ -63,7 +64,7 @@
           ttl: 1,
           destination: '*',
           timestamp: Date.now(),
-          clientId: dbdb.network.clientId
+          address: dbdb.network.address
         })
       }
 
@@ -85,12 +86,12 @@
       })
 
       setInterval(function() {
-        document.querySelector('#client-id').innerHTML = JSON.stringify(dbdb.network.clientId, 0, 2)
+        document.querySelector('#client-id').innerHTML = dbdb.network.address
 
         document.querySelector('#connections').innerHTML = dbdb.network.connections.bind(dbdb.network)().map(c => {
           return '<br>' + JSON.stringify({
             connectionId: c.id,
-            clientId: c.clientId
+            address: c.address
           })
         })
 
