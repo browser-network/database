@@ -1,6 +1,6 @@
 {
   "name": "@browser-network/database",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A type of distributed database built on top of the distributed browser-network",
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
