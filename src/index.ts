@@ -1,5 +1,4 @@
 import * as bnc from '@browser-network/crypto'
-
 import { LocalDB, WrappedState } from './LocalDB'
 import Network, { Message } from '@browser-network/network'
 import * as t from './types.d'
@@ -116,12 +115,6 @@ export default class Dbdb<S> {
   // UIs can listen for changes and update based on the new state of the world
   onChange(handler: () => void) {
     this._onChangeHandlers.push(handler)
-  }
-
-  // Generate the type of secret key that dbdb uses for its
-  // cryptography.
-  static generateSecret() {
-    return bnc.generateSecret()
   }
 
   private onMessage = (message: DbdbMessage & Message) => {

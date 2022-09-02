@@ -111,6 +111,10 @@ browser windows you have open.
 ## Usage
 
 ```ts
+import Network from '@browser-network/network'
+import Bnc from '@browser-network/crypto'
+import Dbdb from '@browser-network/database'
+
 // This is a database that operates on top of the browser network.
 const network = new Network({
   switchAddress: 'localhost:5678',
@@ -120,8 +124,9 @@ const network = new Network({
 
 // Instantiate the db
 const db = new Dbdb({
+  appId: 'just-needs-to-be-unique-from-other-appIds-on-the-network',
   network: network,
-  secret: Dbdb.generateSecret() // your users will reuse this, saving it somewhere safe and secret.
+  secret: Bnc.generateSecret() // your users will reuse this, saving it somewhere safe and secret.
 })
 
 // Listen for changes. This will be called every time we discover a new

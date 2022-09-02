@@ -41,10 +41,10 @@
     <script src="//unpkg.com/@browser-network/network/umd/network.js"></script>
 
     <script>
-      window.dbdb = new Dbdb.Dbdb({
+      window.dbdb = new Dbdb({
         secret: '7e842370a488733a1f226e9686f37d8817f8960c2edfc21eddda51f6a9d7c4c4',
         appId: '[dbdb-test-app-id]',
-        network: new Network.Network({
+        network: new Network({
           switchAddress: 'http://localhost:5678',
           secret: Bnc.generateSecret(),
           networkId: '[dbdb-test-network-id]',
