@@ -1,7 +1,7 @@
 import * as bnc from '@browser-network/crypto'
 
 import { LocalDB, WrappedState } from './LocalDB'
-import { Network, Message } from '@browser-network/network'
+import Network, { Message } from '@browser-network/network'
 import * as t from './types.d'
 import { debugFactory } from './util'
 
@@ -59,18 +59,18 @@ type StateOfferings = {
 }
 
 type DbdbProps = {
+  network: Network
   secret: string
   appId: string
-  network: Network
 }
 
-export class Dbdb<S> {
+export default class Dbdb<S> {
   appId: string
   network: Network
   localDB: LocalDB
   networkId: t.IDString
   address: t.IDString
-  publicKey: t.PublicKey // TODO not sure yet if this will be itself or just be the address
+  publicKey: t.PublicKey
   secret: string
   switchAddress: t.SwitchAddress
   allowList: t.IDString[] = []

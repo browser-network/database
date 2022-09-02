@@ -1,9 +1,9 @@
 import tap from 'tap'
-import { Dbdb } from '../src'
-import { Network } from '@browser-network/network'
+import Dbdb from '../src'
+import Network from '@browser-network/network'
 import * as bnc from '@browser-network/crypto'
 import { ensureEventually } from './util'
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'crypto' // TODO ensure this doesn't inflate the build size, use uuid/v4 if it does
 
 // Ensure if person A makes some state and sends it to person B, then person A
 // logs out, then person C logs in, that person C will get person A's state via

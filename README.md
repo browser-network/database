@@ -63,13 +63,13 @@ super quick and easy:
     <script src="//unpkg.com/@browser-network/database/umd/dbdb.min.js"></script>
     <script>
 
-      const network = new Network.Network({
+      const network = new Network({
         switchAddress: 'http://localhost:5678', // default address of switchboard
-        clientId: crypto.randomUUID(), // arbitrary string
+        secret: Bnc.generateSecret(),
         networkId: 'test-network'
       })
 
-      const dbdb = new Dbdb.Dbdb({
+      const dbdb = new Dbdb({
         network: network,
         secret: Bnc.generateSecret(),
         appId: 'dbdb-app-id' // this just needs to be unique for your app, which it is for this

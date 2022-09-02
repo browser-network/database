@@ -41,8 +41,8 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@browser-network/crypto": "^0.0.1",
-    "@browser-network/network": "^0.0.1",
+    "@browser-network/crypto": "^0.0.3",
+    "@browser-network/network": "^0.0.11",
     "eccrypto": "^1.1.6"
   },
   "devDependencies": {
