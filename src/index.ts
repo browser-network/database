@@ -1,6 +1,7 @@
 import * as bnc from '@browser-network/crypto'
 import { LocalDB, WrappedState } from './LocalDB'
-import Network, { Message } from '@browser-network/network'
+import type Network from '@browser-network/network'
+import type { Message } from '@browser-network/network'
 import * as t from './types.d'
 import { debugFactory } from './util'
 
