@@ -110,7 +110,7 @@ export default class Dbdb<S> {
     return this.localDB.get(address) as WrappedState<S>
   }
 
-  getAll = () => this.localDB.getAll()
+  getAll = () => this.localDB.getAll() as WrappedState<S>[]
 
   // This will fire every time we update our state. This way reactive
   // UIs can listen for changes and update based on the new state of the world
