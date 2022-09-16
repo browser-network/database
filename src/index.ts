@@ -112,6 +112,11 @@ export default class Dbdb<S> {
 
   getAll = () => this.localDB.getAll() as WrappedState<S>[]
 
+  // Clear the local storage of everyone's items. Essentially resets the machine
+  // to as if it's never seen the network before. If it is connected still, it will
+  // rapidly start to repopulate.
+  clear = () => this.localDB.clear()
+
   // This will fire every time we update our state. This way reactive
   // UIs can listen for changes and update based on the new state of the world
   onChange(handler: () => void) {

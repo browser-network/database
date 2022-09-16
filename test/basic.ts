@@ -76,18 +76,21 @@ tap.test(`State is passed around`, async t => {
     })
   })
 
+  // Ensure dbdb3 sees dbdb1's state even though they were never simultaneously
+  // online (via dbdb2)
   await ensureEventually(2 * 60 * 1000, () => {
-    // Ensure dbdb3 sees dbdb1's state even though they were never simultaneously
-    // online (via dbdb2)
-    const dbdb3State = dbdb3.get(dbdb1.address)
-    if (dbdb3State) console.log('dbdb3 found dbdb1 state:', dbdb3State)
-    return !!dbdb3State
+    const db1StateByDb3 = dbdb3.get(dbdb1.address)
+    if (db1StateByDb3) console.log('dbdb3 found dbdb1 state:', db1StateByDb3)
+    return !!db1StateByDb3
   }).catch(() => {
     t.fail(`dbdb3 did not see dbdb1's state within the time limit`)
   }).then(() => {
     t.pass('dbdb3 sees dbdb1\'s state')
-  }).finally(() => {
-    t.end()
   })
 
+  // Now check to make sure clear() works
+  dbdb3.clear()
+  t.equal(dbdb3.getAll().length, 0, 'dbdb3 did not clear its local storage')
+
+  t.end()
 })

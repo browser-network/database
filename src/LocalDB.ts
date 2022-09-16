@@ -23,7 +23,7 @@ export type WrappedState<S = unknown> = {
 
 const buildStorageShim = () => {
   // @ts-ignore
-  const localStorageShim: Storage = {}
+  let localStorageShim: Storage = {}
 
   localStorageShim.setItem = (key: string, val: string) => {
     localStorageShim[key] = val
@@ -31,6 +31,10 @@ const buildStorageShim = () => {
 
   localStorageShim.getItem = (key: string) => {
     return localStorageShim[key]
+  }
+
+  localStorageShim.removeItem = (key: string) => {
+    delete localStorageShim[key]
   }
 
   return localStorageShim
@@ -62,6 +66,19 @@ export class LocalDB {
     const lsKeys = Object.keys(this.localStorage)
     const ourKeys = lsKeys.filter(key => key.indexOf(this.buildKey('')) > -1)
     return ourKeys.map(this.getByKey)
+  }
+
+  // Remove a single item
+  remove(address: t.IDString): void {
+    const key = this.buildKey(address)
+    this.localStorage.removeItem(key)
+  }
+
+  // Remove all items
+  clear(): void {
+    this.getAll().forEach(wrapped => {
+      this.remove(wrapped.id)
+    })
   }
 
   buildKey(address: t.IDString) {

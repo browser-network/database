@@ -158,6 +158,10 @@ db.get(<id>) // where id is a clientId, which is the same as the WrappedState['i
 
 // Get all of the states
 db.getAll()
+
+// Clear the local Storage. Note that if you're still connected to others on the network,
+// your storage will rapidly begin to repopulate.
+db.clear()
 ```
 
 ### Allow/deny lists
@@ -170,17 +174,31 @@ Dbdb also has allow/deny lists. The lists are just an exposed array of
 * If there're any ids in the `allowList`, and a user is _not_ in there, then
 we will not accept any messages from them.
 
-### Dbdb.generateSecret()
+### generateSecret()
 
 Dbdb uses a public key cryptography system to ensure only a user can update
-their own state. The public key is derived from the secret. Dbdb exposes an
+their own state. The public key is derived from the secret. @browser-network exposes an
 easy way to make a dbdb acceptable private key, which your users can store and
-then put back in as the `secret` field when Dbdb is instantiated. Note this is
-a static method and only exists on the constructor `Dbdb`.
+then put back in as the `secret` field when Dbdb is instantiated.
 
 ```ts
-Dbdb.generateSecret() // -> hex string
+import { generateSecret } from '@browser-network/crypto'
+generateSecret() // -> hex string
 ```
+
+### On removing items
+
+Dbdb has an interesting take on removing items: there's explicitly no concept
+of it, because that'd take it from declarative kinda to imperative kinda,
+whereby only the people online at the time of removal would know to remove
+it from their own local storage. For users offline at the time of deletion,
+they'd happily send out that state to everyone and everyone else would pick
+it up as if it was new state they'd never seen before. If instead a user
+sets their state to null or undefined, it can be dealt with on the app
+level, and the update will make it to everyone.
+
+If need be, later some logic can be put in to remove al the state that's set to
+null or undefined or {} or [] or ''.
 
 ## Building
 
