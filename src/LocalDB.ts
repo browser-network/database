@@ -41,7 +41,7 @@ const buildStorageShim = () => {
 }
 
 export class LocalDB {
-  keyPrefix = 'dbdb'
+  keyPrefix = 'db'
   localStorage: ReturnType<typeof buildStorageShim>
 
   appId: t.GUID

@@ -1,16 +1,16 @@
-# Distributed Browser Database (Dbdb)
+# Browser-Network Database
 
 A distributed, decentralized, trustless, peer to peer database that exists in
 the browser on top of [The Browser
 Network](https://github.com/browser-network/network).
 
-Dbdb was created to allow apps to be developed completely client side. I don't
+This database was created to allow apps to be developed completely client side. I don't
 mean [serverless in the modern
 sense](https://www.redhat.com/en/topics/cloud-native-apps/what-is-serverless),
 I mean truly apps running without servers at all.
 
 It works by allowing each user to have one "state". The state can be anything.
-When a user updates their state, Dbdb passes it to other users on the network
+When a user updates their state, the db passes it to other users on the network
 who hold on to it. If a third user wants to see the first user's state and
 the first user is not online, whoever else may have it can pass it along.
 
@@ -60,7 +60,7 @@ super quick and easy:
 
     <script src="//unpkg.com/@browser-network/crypto/umd/crypto.min.js"></script>
     <script src="//unpkg.com/@browser-network/network/umd/network.min.js"></script>
-    <script src="//unpkg.com/@browser-network/database/umd/dbdb.min.js"></script>
+    <script src="//unpkg.com/@browser-network/database/umd/db.min.js"></script>
     <script>
 
       const network = new Network({
@@ -69,18 +69,18 @@ super quick and easy:
         networkId: 'test-network'
       })
 
-      const dbdb = new Dbdb({
+      const db = new Db({
         network: network,
         secret: Bnc.generateSecret(),
-        appId: 'dbdb-app-id' // this just needs to be unique for your app, which it is for this
+        appId: 'db-app-id' // this just needs to be unique for your app, which it is for this
       })
 
-      dbdb.onChange(() => {
-        console.log("We've got updates!:", dbdb.getAll())
-        document.querySelector('#state').innerHTML = JSON.stringify(dbdb.getAll())
+      db.onChange(() => {
+        console.log("We've got updates!:", db.getAll())
+        document.querySelector('#state').innerHTML = JSON.stringify(db.getAll())
       })
 
-      window.setState = (state) => dbdb.set(state)
+      window.setState = (state) => db.set(state)
 
     </script>
   </body>
@@ -113,7 +113,7 @@ browser windows you have open.
 ```ts
 import Network from '@browser-network/network'
 import Bnc from '@browser-network/crypto'
-import Dbdb from '@browser-network/database'
+import Db from '@browser-network/database'
 
 // This is a database that operates on top of the browser network.
 const network = new Network({
@@ -123,7 +123,7 @@ const network = new Network({
 })
 
 // Instantiate the db
-const db = new Dbdb({
+const db = new Db({
   appId: 'just-needs-to-be-unique-from-other-appIds-on-the-network',
   network: network,
   secret: Bnc.generateSecret() // your users will reuse this, saving it somewhere safe and secret.
@@ -166,8 +166,8 @@ db.clear()
 
 ### Allow/deny lists
 
-Dbdb also has allow/deny lists. The lists are just an exposed array of
-`clientId`s, so add to it like `dbdb.allowList.push('<clientId>')`. Or swap in
+Db also has allow/deny lists. The lists are just an exposed array of
+`clientId`s, so add to it like `db.allowList.push('<clientId>')`. Or swap in
 `denyList`.
 
 * If a user is on the `denyList`, we will never accept any messages from them.
@@ -176,10 +176,10 @@ we will not accept any messages from them.
 
 ### generateSecret()
 
-Dbdb uses a public key cryptography system to ensure only a user can update
+Db uses a public key cryptography system to ensure only a user can update
 their own state. The public key is derived from the secret. @browser-network exposes an
-easy way to make a dbdb acceptable private key, which your users can store and
-then put back in as the `secret` field when Dbdb is instantiated.
+easy way to make a db acceptable private key, which your users can store and
+then put back in as the `secret` field when Db is instantiated.
 
 ```ts
 import { generateSecret } from '@browser-network/crypto'
@@ -188,7 +188,7 @@ generateSecret() // -> hex string
 
 ### On removing items
 
-Dbdb has an interesting take on removing items: there's explicitly no concept
+This database has an interesting take on removing items: there's explicitly no concept
 of it, because that'd take it from declarative kinda to imperative kinda,
 whereby only the people online at the time of removal would know to remove
 it from their own local storage. For users offline at the time of deletion,

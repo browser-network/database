@@ -2,7 +2,7 @@
 
 <html lang="en">
   <head>
-    <title>Dbdb</title>
+    <title>Browser-Network Db</title>
   </head>
   <body style="background-color: black; color: white;">
 
@@ -21,33 +21,33 @@
       <h3>switchboard request interval</h3>
       <code id='switchboard-request-interval'></code>
 
-      <button onclick='sendMessage(dbdb.network.address + ": Hello there!")'>Say Hi</button>
+      <button onclick='sendMessage(db.network.address + ": Hello there!")'>Say Hi</button>
 
       <div>
-        <button onclick='dbdb.network.startSwitchboardRequestInterval()'>Start Switch Interval</button>
-        <button onclick='dbdb.network.startOfferBroadcastInterval()'>Start Offer Broadcast</button>
-        <button onclick='dbdb.network.startGarbageCollectionInterval()'>Start Garbage Collection</button>
+        <button onclick='db.network.startSwitchboardRequestInterval()'>Start Switch Interval</button>
+        <button onclick='db.network.startOfferBroadcastInterval()'>Start Offer Broadcast</button>
+        <button onclick='db.network.startGarbageCollectionInterval()'>Start Garbage Collection</button>
       </div>
 
       <div>
-        <button onclick='dbdb.network.stopSwitchboardRequestInterval()'>Stop Switch Interval</button>
-        <button onclick='dbdb.network.stopOfferBroadcastInterval()'>Stop Offer Broadcast</button>
-        <button onclick='dbdb.network.stopGarbageCollectionInterval()'>Stop Garbage Collection</button>
+        <button onclick='db.network.stopSwitchboardRequestInterval()'>Stop Switch Interval</button>
+        <button onclick='db.network.stopOfferBroadcastInterval()'>Stop Offer Broadcast</button>
+        <button onclick='db.network.stopGarbageCollectionInterval()'>Stop Garbage Collection</button>
       </div>
     </code>
 
     <script src="//unpkg.com/@browser-network/crypto/umd/crypto.js"></script>
-    <script src="/umd/dbdb.js"></script>
+    <script src="/umd/db.js"></script>
     <script src="//unpkg.com/@browser-network/network/umd/network.js"></script>
 
     <script>
-      window.dbdb = new Dbdb({
+      window.db = new Db({
         secret: '7e842370a488733a1f226e9686f37d8817f8960c2edfc21eddda51f6a9d7c4c4',
-        appId: '[dbdb-test-app-id]',
+        appId: '[db-test-app-id]',
         network: new Network({
           switchAddress: 'http://localhost:5678',
           secret: Bnc.generateSecret(),
-          networkId: '[dbdb-test-network-id]',
+          networkId: '[db-test-network-id]',
           config:{
             offerBroadcastInterval: 5 * 1000,
             switchboardRequestInterval: 5 * 1000,
@@ -57,18 +57,18 @@
       })
 
       function sendMessage(message) {
-        dbdb.network.broadcast({
+        db.network.broadcast({
           id: crypto.randomUUID(),
           type: 'wahooooooo',
           data: message,
           ttl: 1,
           destination: '*',
           timestamp: Date.now(),
-          address: dbdb.network.address
+          address: db.network.address
         })
       }
 
-      dbdb.network.on('message', ({ appId, message}) => {
+      db.network.on('message', ({ appId, message}) => {
         switch (message.type) {
           case 'wahooooooo': {
             const innerHTML = document.querySelector('#messages').innerHTML
@@ -81,23 +81,23 @@
         }
       })
 
-      dbdb.onChange(() => {
-        console.log('got a change!', dbdb.getAll())
+      db.onChange(() => {
+        console.log('got a change!', db.getAll())
       })
 
       setInterval(function() {
-        document.querySelector('#client-id').innerHTML = dbdb.network.address
+        document.querySelector('#client-id').innerHTML = db.network.address
 
-        document.querySelector('#connections').innerHTML = dbdb.network.connections.bind(dbdb.network)().map(c => {
+        document.querySelector('#connections').innerHTML = db.network.connections.bind(db.network)().map(c => {
           return '<br>' + JSON.stringify({
             connectionId: c.id,
             address: c.address
           })
         })
 
-        document.querySelector('#switchboard-request-interval').innerHTML = JSON.stringify(dbdb.network._switchboardRequestInterval, 0, 2)
+        document.querySelector('#switchboard-request-interval').innerHTML = JSON.stringify(db.network._switchboardRequestInterval, 0, 2)
 
-        document.querySelector('#states').innerHTML = dbdb.getAll().map(w => '<br>' + JSON.stringify([w.id, w.timestamp, w.state]))
+        document.querySelector('#states').innerHTML = db.getAll().map(w => '<br>' + JSON.stringify([w.id, w.timestamp, w.state]))
       }, 500)
 
       window.DEBUG = false

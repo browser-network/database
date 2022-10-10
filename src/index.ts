@@ -5,7 +5,7 @@ import type { Message } from '@browser-network/network'
 import * as t from './types.d'
 import { debugFactory } from './util'
 
-const debug = debugFactory('Dbdb')
+const debug = debugFactory('Db')
 
 // convenience
 const wrapState = async <S>(state: S, address: t.IDString, pub: t.PublicKey, priv: t.PrivateKey): Promise<WrappedState<S>> => {
@@ -38,6 +38,7 @@ type StateRequestMessage = {
   type: 'state-request'
   data: t.IDString // the address for the state for which you're looking
   appId: string
+  destination: string
 }
 
 type StateOfferingMessage = {
@@ -46,7 +47,7 @@ type StateOfferingMessage = {
   appId: string
 }
 
-type DbdbMessage =
+type DbMessage =
   StateUpdateMessage |
   StateOfferingMessage |
   StateRequestMessage
@@ -58,15 +59,18 @@ type StateOfferings = {
   [stateId: t.GUID]: t.TimeStamp
 }
 
-type DbdbProps = {
+type DbProps = {
   network: Network
   secret: string
   appId: string
 }
 
-export default class Dbdb<S> {
+// TODO I've seen a loop before, where state-offering messages are being spammed.
+// I don't know how this would have happened as it seems to be hard coded to send only
+// once per 5 seconds.
+export default class Db<S> {
   appId: string
-  network: Network
+  network: Network<DbMessage>
   localDB: LocalDB
   networkId: t.IDString
   address: t.IDString
@@ -76,19 +80,19 @@ export default class Dbdb<S> {
   allowList: t.IDString[] = []
   denyList: t.IDString[] = []
 
-  _onChangeHandlers: (() => void)[] = []
+  private _onChangeHandlers: (() => void)[] = []
 
-  constructor({ secret, appId, network }: DbdbProps) {
+  constructor({ secret, appId, network }: DbProps) {
     this.networkId = network.networkId
     this.appId = appId
     this.localDB = new LocalDB(appId)
     this.address = network.address
     this.secret = secret
-    this.network = network
+    this.network = network as Network<DbMessage>
 
-    this.network.on('message', ({ appId, message }) => {
-      if (appId !== this.appId) return
-      this.onMessage(message as DbdbMessage & Message)
+    this.network.on('message', (message) => {
+      if (message.appId !== this.appId) return
+      this.onMessage(message)
     })
 
     // Here we derive the pub key from the private
@@ -97,6 +101,10 @@ export default class Dbdb<S> {
     setInterval(this.broadcastStateOfferings, 5000)
   }
 
+  /**
+  * @description This is how you write data to the network. This will put whatever
+  * state you give it into a DB specific wrapper with your state in the `state` key.
+  */
   async set(state: S): Promise<void> {
     // set to local state
     const data = await wrapState(state, this.address, this.publicKey, this.secret)
@@ -106,24 +114,61 @@ export default class Dbdb<S> {
     this.broadcastStateUpdate(data)
   }
 
+  /**
+  * @description Get the state of the user whose address is passed in.
+  */
   get(address: t.IDString): WrappedState<S> | undefined {
     return this.localDB.get(address) as WrappedState<S>
   }
 
+  /**
+  * @description Get all entries from our local DB, wrapped in the DB's
+  * WrappedState type.
+  *
+  * @TODO: Does it need to be wrapped? Does the user ever care about this
+  * wrapping or should they just be able to go straight to their state?
+  */
   getAll = () => this.localDB.getAll() as WrappedState<S>[]
 
-  // Clear the local storage of everyone's items. Essentially resets the machine
-  // to as if it's never seen the network before. If it is connected still, it will
-  // rapidly start to repopulate.
-  clear = () => this.localDB.clear()
-
-  // This will fire every time we update our state. This way reactive
-  // UIs can listen for changes and update based on the new state of the world
+  /**
+  * @description This will fire every time we update our state. This way reactive
+  * UIs can listen for changes and update based on the new state of the world
+  */
   onChange(handler: () => void) {
     this._onChangeHandlers.push(handler)
   }
 
-  private onMessage = (message: DbdbMessage & Message) => {
+  /**
+  * @description clear the DB of all listeners.
+  */
+  removeChangeHandlers() {
+    this._onChangeHandlers = []
+  }
+
+  /**
+  * @description clear the DB of a specific listener.
+  */
+  removeChangeHandler(func: Function) {
+    const handlers = Array.from(this._onChangeHandlers)
+
+    handlers.forEach((handler, i) => {
+      if (handler === func) {
+        this._onChangeHandlers.splice(i, 1)
+      }
+    })
+  }
+
+  /**
+  * @description Clear the local storage of everyone's items. Essentially resets the machine
+  * to as if it's never seen the network before. If it is connected still, it will
+  * rapidly start to repopulate.
+  */
+  clear = () => {
+    this.localDB.clear()
+    this.runChangeHandlers()
+  }
+
+  private onMessage = (message: DbMessage & Message) => {
     switch (message.type) {
       case 'state-offering': {
         debug(5, 'received state-offering:', message)
@@ -194,17 +239,19 @@ export default class Dbdb<S> {
     this.broadcastStateUpdate(data)
   }
 
-  // We will periodically inform the network of what states we have
-  // and how old they are. If someone else hears that we have a state
-  // newer than what they have on record, they can send us a request for
-  // what we have.
+  /**
+  * We will periodically inform the network of what states we have
+  * and how old they are. If someone else hears that we have a state
+  * newer than what they have on record, they can send us a request for
+  * what we have.
+  */
   private broadcastStateOfferings = () => {
     const offerings = {}
     for (const state of this.localDB.getAll()) {
       offerings[state.id] = state.timestamp
     }
 
-    this.network.broadcast<DbdbMessage>({
+    this.network.broadcast({
       type: 'state-offering',
       appId: this.appId,
       data: offerings
@@ -216,6 +263,10 @@ export default class Dbdb<S> {
 
     // Every time we set local, we've updated our storage, and we
     // want to inform the user as such
+    this.runChangeHandlers()
+  }
+
+  private runChangeHandlers = () => {
     this._onChangeHandlers.forEach(handler => handler())
   }
 

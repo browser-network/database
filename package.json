@@ -12,8 +12,8 @@
     "test": "tap --ts --no-timeout --no-coverage test/*.ts",
     "clean": "shx rm -rf dist build umd; shx mkdir umd",
     "compile:ts": "tsc",
-    "compile:pack": "browserify dist/src/index.js -o umd/dbdb.js -s Dbdb",
-    "compile:pack:min": "uglifyjs umd/dbdb.js --compress -o umd/dbdb.min.js",
+    "compile:pack": "browserify dist/src/index.js -o umd/db.js -s Db",
+    "compile:pack:min": "uglifyjs umd/db.js --compress -o umd/db.min.js",
     "build": "npm run clean; npm-run-all compile:**",
     "build:watch": "nodemon -e ts,json -i dist -x 'npm run compile:ts && npm run compile:pack'",
     "start:dev": "node serve.js & npm run build:watch",
@@ -42,11 +42,9 @@
   "license": "MIT",
   "dependencies": {
     "@browser-network/crypto": "^0.0.3",
-    "@browser-network/network": "^0.0.11",
-    "eccrypto": "^1.1.6"
+    "@browser-network/network": "../network"
   },
   "devDependencies": {
-    "@types/eccrypto": "^1.1.3",
     "@types/node": "^16",
     "@types/tap": "^15.0.7",
     "browserify": "^17.0.0",
