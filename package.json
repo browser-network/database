@@ -42,7 +42,7 @@
   "license": "MIT",
   "dependencies": {
     "@browser-network/crypto": "^0.0.3",
-    "@browser-network/network": "../network"
+    "@browser-network/network": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^16",
