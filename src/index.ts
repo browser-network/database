@@ -172,7 +172,7 @@ export default class Db<S> {
     switch (message.type) {
       case 'state-offering': {
         debug(5, 'received state-offering:', message)
-        return this.onStateOffering(message.data)
+        return this.onStateOffering(message.data, message.address)
       }
       case 'state-request': {
         debug(5, 'received state-request:', message)
@@ -185,12 +185,12 @@ export default class Db<S> {
     }
   }
 
-  private onStateOffering(offerings: StateOfferings) {
+  private onStateOffering(offerings: StateOfferings, sender: t.IDString) {
     const requestState = (address: t.IDString) => {
       this.network.broadcast({
         type: 'state-request',
         appId: this.appId,
-        destination: address,
+        destination: sender,
         data: address
       })
     }
