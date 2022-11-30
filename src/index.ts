@@ -78,8 +78,8 @@ export default class Db<S> {
   secret: string
   switchAddress: t.SwitchAddress
   allowList: t.IDString[] = []
-  denyList: t.IDString[] = []
 
+  private _denyList: { [address: t.PublicKey]: true } = {}
   private _onChangeHandlers: (() => void)[] = []
 
   constructor({ secret, appId, network }: DbProps) {
@@ -168,6 +168,28 @@ export default class Db<S> {
     this.runChangeHandlers()
   }
 
+  /**
+  * @description Effectively blocks a user. Adds them to our deny list, which means we'll no longer
+  * accept updates from them, which means we will no longer forward their updates as well. Also
+  * removes their state from our storage. It's up to the developer to keep track of these (probably
+  * within the state object that they store in this db), and repopulate this list on startup.
+  * Calling deny with an address that's already blocked is a noop and O(1) time so don't worry about
+  * spamming this call.
+  */
+ deny = (address: t.PublicKey) => {
+   if (this._denyList[address]) { return }
+   this._denyList[address] = true
+   this.localDB.remove(address)
+ }
+
+ /**
+ * @description Unblock a user. Removes them from our deny list, at which point the DB will naturally
+ * start to repopulate that user's state.
+ */
+ allow = (address: t.PublicKey) => {
+   delete this._denyList[address]
+ }
+
   private onMessage = (message: DbMessage & Message) => {
     switch (message.type) {
       case 'state-offering': {
@@ -214,7 +236,7 @@ export default class Db<S> {
     // * The sender is on our deny list, or
     // * We have an allow list going and the sender is not on it
     const isForbidden =
-      this.denyList.includes(update.publicKey) ||
+      this._denyList[update.publicKey] ||
       (this.allowList.length > 0 && !this.allowList.includes(update.publicKey))
 
     if (isForbidden) return debug(5, 'state update from pubKey not allowed:', update.publicKey)

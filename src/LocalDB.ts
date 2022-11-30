@@ -1,23 +1,33 @@
 import * as t from './types.d'
 
 export type WrappedState<S = unknown> = {
-  // Identify this bit of state by who it belongs to
+  /**
+  * @description Identify this bit of state by who it belongs to
+  */
   id: t.IDString
 
-  // Every state has a timestamp to represent when it was last updated.
-  // If there's a newer timestamp than the one we have on file, we check
-  // its veracity and save it.
+  /**
+  * @description Every state has a timestamp to represent when it was last updated.
+  * If there's a newer timestamp than the one we have on file, we check
+  * its veracity and save it.
+  */
   timestamp: t.TimeStamp
 
-  // Every state has to be signed by the user. This is how we verify
-  // the veracity of each state
+  /**
+  * @description Every state has to be signed by the user. This is how we verify
+  * the veracity of each state.
+  */
   signature: t.HexString
 
-  // This will be hashed and included in signature to ensure the veracity
-  // of someone's data.
+  /**
+  * @description This will be hashed and included in signature to ensure the veracity
+  * of someone's data.
+  */
   state: S
 
-  // To ensure veracity of state
+  /**
+  * @description To ensure veracity of state
+  */
   publicKey: t.PublicKey
 }
 

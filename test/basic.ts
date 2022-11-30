@@ -25,10 +25,7 @@ tap.test(`State is passed around`, async t => {
     secret: secret1,
     network: new Network({
       switchAddress, networkId,
-      secret: secret1,
-      config: {
-        respectSwitchboardVolunteerMessages: false
-      }
+      secret: secret1
     })
   })
 
@@ -39,10 +36,7 @@ tap.test(`State is passed around`, async t => {
     secret: secret2,
     network: new Network({
       switchAddress, networkId,
-      secret: secret2,
-      config: {
-        respectSwitchboardVolunteerMessages: false
-      }
+      secret: secret2
     })
   })
 
@@ -51,13 +45,14 @@ tap.test(`State is passed around`, async t => {
   await ensureEventually(2 * 60 * 1000, () => {
     // eventually db2 should have db1's address
     const db2State = db2.get(db1.address)
-    if (db2State) console.log('db2 found db1 state:', db2State)
     return !!db2State
   }).catch(() => {
     t.fail(`db2 did not see db1's state within the time limit`)
   }).then(() => {
     t.pass('db2 sees db1\'s state')
   })
+
+  console.log('Db2 found db1s state, shutting down db1 and firing up db3')
 
   // Now we shut down db1
   db1.network.teardown()
@@ -69,18 +64,14 @@ tap.test(`State is passed around`, async t => {
     secret: secret3,
     network: new Network({
       switchAddress, networkId,
-      secret: secret3,
-      config: {
-        respectSwitchboardVolunteerMessages: false
-      }
+      secret: secret3
     })
   })
 
   // Ensure db3 sees db1's state even though they were never simultaneously
   // online (via db2)
-  await ensureEventually(2 * 60 * 1000, () => {
+  await ensureEventually(1 * 60 * 1000, () => {
     const db1StateByDb3 = db3.get(db1.address)
-    if (db1StateByDb3) console.log('db3 found db1 state:', db1StateByDb3)
     return !!db1StateByDb3
   }).catch(() => {
     t.fail(`db3 did not see db1's state within the time limit`)
@@ -88,9 +79,30 @@ tap.test(`State is passed around`, async t => {
     t.pass('db3 sees db1\'s state')
   })
 
+  console.log('db3 found db1s state via db2, clearing db3 and checking its length')
+
   // Now check to make sure clear() works
   db3.clear()
   t.equal(db3.getAll().length, 0, 'db3 did not clear its local storage')
+
+  console.log('db3 cleared its storage!, db3 denying db1 and ensuring no state')
+
+  // Now we block db1 from db3 and ensure it doesn't come through
+  db3.deny(db1.address)
+  db2.set({ state: 'db2 state'})
+  await ensureEventually(1 * 60 * 1000, () => {
+    return db3.get(db2.address) && !db3.get(db1.address)
+  })
+
+  console.log('db3 found no state for db1 but found state for db2, allowing db1 again and checking its state')
+
+  // Now we allow it again and ensure it starts coming back through
+  db3.allow(db1.address)
+  await ensureEventually(1 * 60 * 1000, () => {
+    return !!db3.get(db1.address)
+  })
+
+  console.log('db3 found db1s address again after re-allowing it!')
 
   t.end()
 })
