@@ -162,6 +162,14 @@ db.getAll()
 // Clear the local Storage. Note that if you're still connected to others on the network,
 // your storage will rapidly begin to repopulate.
 db.clear()
+
+// Block an address. This will prevent the db from storing or transfering state from that address.
+// It'll also remove what state of that address is currently saved.
+db.deny(address)
+
+// Allow an address after having blocked it. Once this is called, the state for that person, if it's
+// still present on the network, will come streaming back in.
+db.allow(address)
 ```
 
 ### Allow/deny lists
