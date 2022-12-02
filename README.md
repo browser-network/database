@@ -167,16 +167,20 @@ db.clear()
 // It'll also remove what state of that address is currently saved.
 db.deny(address)
 
-// Allow an address after having blocked it. Once this is called, the state for that person, if it's
+// Unblock an address after having blocked it. Once this is called, the state for that person, if it's
 // still present on the network, will come streaming back in.
+db.undeny(address)
+
+// Add the address to the allow list. Once a single user is on here, no other users will be accepted
+// into the database.
 db.allow(address)
+
+// Remove a user from the allow list. If there are any addresses left in the allow list, this user's state
+// will no longer be accepted into the database. Either way, this state will be removed from the db.
+db.unallow(address)
 ```
 
 ### Allow/deny lists
-
-Db also has allow/deny lists. The lists are just an exposed array of
-`clientId`s, so add to it like `db.allowList.push('<clientId>')`. Or swap in
-`denyList`.
 
 * If a user is on the `denyList`, we will never accept any messages from them.
 * If there're any ids in the `allowList`, and a user is _not_ in there, then
@@ -205,7 +209,7 @@ it up as if it was new state they'd never seen before. If instead a user
 sets their state to null or undefined, it can be dealt with on the app
 level, and the update will make it to everyone.
 
-If need be, later some logic can be put in to remove al the state that's set to
+If need be, later some logic can be put in to remove all the state that's set to
 null or undefined or {} or [] or ''.
 
 ## Building

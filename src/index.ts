@@ -77,9 +77,9 @@ export default class Db<S> {
   publicKey: t.PublicKey
   secret: string
   switchAddress: t.SwitchAddress
-  allowList: t.IDString[] = []
 
   private _denyList: { [address: t.PublicKey]: true } = {}
+  private _allowList: { [address: t.PublicKey]: true } = {}
   private _onChangeHandlers: (() => void)[] = []
 
   constructor({ secret, appId, network }: DbProps) {
@@ -171,24 +171,49 @@ export default class Db<S> {
   /**
   * @description Effectively blocks a user. Adds them to our deny list, which means we'll no longer
   * accept updates from them, which means we will no longer forward their updates as well. Also
-  * removes their state from our storage. It's up to the developer to keep track of these (probably
+  * removes their state from our storage.
+  *
+  * It's up to the developer to keep track of these (probably
   * within the state object that they store in this db), and repopulate this list on startup.
   * Calling deny with an address that's already blocked is a noop and O(1) time so don't worry about
   * spamming this call.
   */
- deny = (address: t.PublicKey) => {
-   if (this._denyList[address]) { return }
-   this._denyList[address] = true
-   this.localDB.remove(address)
- }
+  deny = (address: t.PublicKey) => {
+    if (this._denyList[address]) { return }
+    this._denyList[address] = true
+    this.localDB.remove(address)
+  }
 
- /**
- * @description Unblock a user. Removes them from our deny list, at which point the DB will naturally
- * start to repopulate that user's state.
- */
- allow = (address: t.PublicKey) => {
-   delete this._denyList[address]
- }
+  /**
+  * @description Unblock a user. Removes them from our deny list, at which point the DB will naturally
+  * start to repopulate that user's state.
+  */
+  undeny = (address: t.PublicKey) => {
+    delete this._denyList[address]
+  }
+
+  /**
+  * @description Add a user to our allow list. Once a single user is on this list, _only users on the
+  * allow list will be recorded in the database_. All other users will automatically be ignored.
+  *
+  * It's up to the developer to keep track of these (probably
+  * within the state object that they store in this db), and repopulate this list on startup.
+  * Calling allow with an address that's already on the list is a noop and O(1) time so don't worry about
+  * spamming this call.
+  */
+  allow = (address: t.PublicKey) => {
+    if (this._allowList[address]) { return }
+    this._allowList[address] = true
+  }
+
+  /**
+  * @description Remove a user from the allow list. Calling this will remove the user's state from
+  * our storage, and that user's state will no longer be forwarded either.
+  */
+  unallow = (address: t.PublicKey) => {
+    delete this._allowList[address]
+    this.localDB.remove(address)
+  }
 
   private onMessage = (message: DbMessage & Message) => {
     switch (message.type) {
@@ -221,6 +246,10 @@ export default class Db<S> {
       const remoteStateTimestamp = offerings[remoteId]
       const localState = this.localDB.get(remoteId)
 
+      if (this.isForbidden(remoteId)) {
+        continue
+      }
+
       if (!localState) {
         // we don't even have this state yet
         requestState(remoteId)
@@ -232,34 +261,38 @@ export default class Db<S> {
   }
 
   private async onStateUpdate(update: WrappedState) {
-    // We won't accept state if:
-    // * The sender is on our deny list, or
-    // * We have an allow list going and the sender is not on it
-    const isForbidden =
-      this._denyList[update.publicKey] ||
-      (this.allowList.length > 0 && !this.allowList.includes(update.publicKey))
-
-    if (isForbidden) return debug(5, 'state update from pubKey not allowed:', update.publicKey)
+    if (this.isForbidden(update.publicKey)) {
+      return debug(5, 'state update from pubKey not allowed:', update.publicKey)
+    }
 
     debug(5, 'received update from another node:', update)
     if (!(await this.verify(update))) { return }
     this.setLocal(update)
   }
 
+  // We won't accept state if:
+  // * The sender is on our deny list, or
+  // * We have an allow list going and the sender is not on it
+  private isForbidden(address: t.PublicKey): boolean {
+  const isForbidden = this._denyList[address] ||
+    (Object.keys(this._allowList).length > 0 && !this._allowList[address])
+  return isForbidden
+}
+
   // Broadcast an update for a specific state id
   private broadcastStateUpdate(data: WrappedState) {
-    this.network.broadcast({
-      type: 'state-update',
-      appId: this.appId,
-      data: data
-    })
-  }
+  this.network.broadcast({
+    type: 'state-update',
+    appId: this.appId,
+    data: data
+  })
+}
 
   private broadcastStateUpdateByStateId(stateId: t.GUID) {
-    const data = this.localDB.get(stateId)
-    if (!data) { return }
-    this.broadcastStateUpdate(data)
-  }
+  const data = this.localDB.get(stateId)
+  if (!data) { return }
+  this.broadcastStateUpdate(data)
+}
 
   /**
   * We will periodically inform the network of what states we have
@@ -268,47 +301,47 @@ export default class Db<S> {
   * what we have.
   */
   private broadcastStateOfferings = () => {
-    const offerings = {}
-    for (const state of this.localDB.getAll()) {
-      offerings[state.id] = state.timestamp
-    }
-
-    this.network.broadcast({
-      type: 'state-offering',
-      appId: this.appId,
-      data: offerings
-    })
+  const offerings = {}
+  for (const state of this.localDB.getAll()) {
+    offerings[state.id] = state.timestamp
   }
+
+  this.network.broadcast({
+    type: 'state-offering',
+    appId: this.appId,
+    data: offerings
+  })
+}
 
   private setLocal(wrapped: WrappedState) {
-    this.localDB.set(wrapped, wrapped.id)
+  this.localDB.set(wrapped, wrapped.id)
 
-    // Every time we set local, we've updated our storage, and we
-    // want to inform the user as such
-    this.runChangeHandlers()
-  }
+  // Every time we set local, we've updated our storage, and we
+  // want to inform the user as such
+  this.runChangeHandlers()
+}
 
   private runChangeHandlers = () => {
-    this._onChangeHandlers.forEach(handler => handler())
-  }
+  this._onChangeHandlers.forEach(handler => handler())
+}
 
-  private async verify(update: WrappedState): Promise<boolean> {
-    // 1. verify timestamp is newer than last
-    if (!this.isNew(update)) { return false }
-    // 2. check veracity of signature
-    if (!(await verifySignature(update))) {
-      debug(1, 'update does not pass verification! update, local version:', update, this.localDB.get(update.id))
-      // TODO add motrucka to rude list
-      return false
-    }
+  private async verify(update: WrappedState): Promise < boolean > {
+  // 1. verify timestamp is newer than last
+  if(!this.isNew(update)) { return false }
+// 2. check veracity of signature
+if (!(await verifySignature(update))) {
+  debug(1, 'update does not pass verification! update, local version:', update, this.localDB.get(update.id))
+  // TODO add motrucka to rude list
+  return false
+}
 
-    return true
+return true
   }
 
   private isNew(update: WrappedState): boolean {
-    const local = this.get(update.id)
-    if (!local) return true
-    return update.timestamp > local.timestamp
-  }
+  const local = this.get(update.id)
+  if (!local) return true
+  return update.timestamp > local.timestamp
+}
 
 }

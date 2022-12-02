@@ -2,7 +2,7 @@ import tap from 'tap'
 import Db from '../src'
 import Network from '@browser-network/network'
 import * as bnc from '@browser-network/crypto'
-import { ensureEventually } from './util'
+import { ensureEventually, sleep } from './util'
 import { randomUUID } from 'crypto' // TODO ensure this doesn't inflate the build size, use uuid/v4 if it does
 
 // Ensure if person A makes some state and sends it to person B, then person A
@@ -40,7 +40,7 @@ tap.test(`State is passed around`, async t => {
     })
   })
 
-  db1.set({ db1: 'state' })
+  db1.set('state')
 
   await ensureEventually(2 * 60 * 1000, () => {
     // eventually db2 should have db1's address
@@ -89,20 +89,51 @@ tap.test(`State is passed around`, async t => {
 
   // Now we block db1 from db3 and ensure it doesn't come through
   db3.deny(db1.address)
-  db2.set({ state: 'db2 state'})
+  db2.set('db2 state')
   await ensureEventually(1 * 60 * 1000, () => {
     return db3.get(db2.address) && !db3.get(db1.address)
+  }).catch(() => {
+    t.fail('db3 had db1s address after it denied it')
+  }).then(() => {
+    t.pass('db3 did not have db1s state after it denied it')
   })
 
-  console.log('db3 found no state for db1 but found state for db2, allowing db1 again and checking its state')
+  console.log('db3 found no state for db1 but found state for db2, undenying db1 again and checking its state')
 
-  // Now we allow it again and ensure it starts coming back through
-  db3.allow(db1.address)
+  // Now we undeny it again and ensure it starts coming back through
+  db3.undeny(db1.address)
   await ensureEventually(1 * 60 * 1000, () => {
     return !!db3.get(db1.address)
+  }).catch(() => {
+    t.fail('db3 undenied db1 but never found its state again')
+  }).then(() => {
+    t.pass('db3 undenied db1 and db1s state came back through')
   })
 
-  console.log('db3 found db1s address again after re-allowing it!')
+  console.log('db3 found db1s address again after undenying it, adding db2 to allow list')
+
+  db3.allow(db1.address)
+
+  db2.set('updated state')
+
+  await sleep(2000) // should be enough for db2's set to have registered
+
+  // make sure the state is the original
+  t.equal(db3.get(db2.address)?.state, 'db2 state', 'db3 is seeing db2s update when db2 is not in its allow list')
+
+  console.log('db3 no longer saw db2s state update, unallowing db2 for a clean allow list')
+
+  // Unallow db2, but more saliently remove everything from the allow list.
+  db3.unallow(db1.address)
+  await ensureEventually(1 * 60 * 1000, () => {
+    return db3.get(db2.address)?.state === 'updated state'
+  }).catch(() => {
+    t.fail('even with an empty allow list db3 did not see db2s updates')
+  }).then(() => {
+    t.pass('after emptying the allow list db3 found db2 again')
+  })
+
+  console.log('db3 found db2s new state')
 
   t.end()
 })
