@@ -60,8 +60,24 @@ type StateOfferings = {
 }
 
 type DbProps = {
+
+  /**
+  * @description The @browser-network/network that this Db app sits on top of. Without this there is no Db!
+  */
   network: Network
+
+  /**
+  * @description The EC private key that Db will use to both generate a public key and validate Db entries with.
+  * See @browser-network/crypto's generateSecret() function.
+  */
   secret: string
+
+  /**
+  * @description This is the namespace under which Db will make its messages. It just needs to be unique
+  * on the network, that's why it's up to the developer to provide this. Every instance of this db that you
+  * want to share data with needs to have the same appId. You could, if you wanted to, have multiple databases
+  * that each had their own set of data, unshared with each other, by providing different appIds here.
+  */
   appId: string
 }
 
